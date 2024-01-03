@@ -91,6 +91,9 @@ def transfer_to_wallets(web3, key):
             sleeping(2,4)
 
 def collect(web3, key, address):
+    if not WALLET_COLLECT:
+        logger.warning(f'WALLET_COLLECT пустой. Введите кошелек в настройках.')
+        return
 
     if (web3.eth.get_balance(address) > 0):
         balance_zkf = check_token_balance(key, check_rpc('ZKF')['rpc'], ZKF)
@@ -98,7 +101,7 @@ def collect(web3, key, address):
             transfer_token(web3,'ZKF', key, balance_zkf, WALLET_COLLECT, ZKF, ERC20_ABI)
             sleeping(5,5)
         else:
-            logger.warning(f'collect ZKF | There is no ZKF. Skip transfer')
+            logger.warning(f'collect ZKF | Нет на аккаунте ZKF. Пропускаем')
 
         amount_left = round(random.uniform(AMOUNT_MIN_LEFT_USDC, AMOUNT_MAX_LEFT_USDC), 6)
         amount_to_transfer = web3.eth.get_balance(address) - Web3.to_wei(amount_left, 'ether')
@@ -108,10 +111,10 @@ def collect(web3, key, address):
             transfer_eth(web3,'ZKF', key, collect_usdc, WALLET_COLLECT)
             sleeping(5,5)
         else:
-            logger.warning(f'collect USDC | Amount to transfer < AMOUNT_LEFT_USDC ({amount_left}). Skip transfer')
+            logger.warning(f'collect USDC | USDC баланс < AMOUNT_LEFT_USDC ({amount_left}). Пропускаем')
 
     else:
-        logger.warning(f'collect USDC | There is no USDC. Skip transfer')
+        logger.warning(f'collect USDC | Нет на аккаунте USDC. Пропускаем')
 
 def sell_inscription(w3, key, inscription_type, amount, price_per_item, retry=0):
     try:

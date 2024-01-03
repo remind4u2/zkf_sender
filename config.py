@@ -23,7 +23,7 @@ SELL_BY_FLOOR = False        # продавать по флору
 FIX_PRICE = 0.0000012        # цена за 1 шт
 
 # COLLECT MODE
-WALLET_COLLECT = '0x6C88Cd8F3b3782ab7D59C3657Dd38B8FAc39Ada1'
+WALLET_COLLECT = ''  # ваш кошелек куда надо собрать монеты
 AMOUNT_MIN_LEFT_USDC = 1.5       # сколько оставлять на кошельке (в будущем возможны дропы для держателей ЗКФ, я бы оставлял на кошельке 1-2 доллара для клейма)
 AMOUNT_MAX_LEFT_USDC = 1.7 
 
