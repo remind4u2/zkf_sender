@@ -8,7 +8,7 @@ from decimal import Decimal
 from web3 import Web3
 from loguru import logger
 from tqdm import tqdm
-from utils_config import *
+from config import *
 import inspect
 
 print(os.path.dirname(os.path.realpath(__file__)))
@@ -194,8 +194,7 @@ def approve_token(private_key, web3: Web3, address_contract, amount_wei, router_
                 'gasPrice': web3.eth.gas_price
             })
             gas = web3.eth.estimate_gas(approve_tx)
-            gas_small = round(gas*gas_approve_ratio)
-            approve_tx['gas'] = gas_small
+            approve_tx['gas'] = gas
 
             signed_tx = web3.eth.account.sign_transaction(approve_tx, private_key=private_key)
             tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
