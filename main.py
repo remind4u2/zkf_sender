@@ -39,7 +39,7 @@ def transfer_token(web3, srcChain, privatekey, amount_to_transfer, to_address, t
     except Exception as error:
         cprint(f'>>> Exception {function_name}: {error}', 'red')
         result = -1
-        sleeping(15, 15)
+        sleeping(2, 2)
         if (retry > 0):
             retry = retry - 1
             result = transfer_token(web3, srcChain, privatekey, amount_to_transfer, to_address, token_address_contract, ERC20_ABI, retry)
@@ -96,22 +96,26 @@ def collect(web3, key, address):
         return
 
     if (web3.eth.get_balance(address) > 0):
-        balance_zkf = check_token_balance(key, check_rpc('ZKF')['rpc'], ZKF)
-        if (balance_zkf > 0):
-            transfer_token(web3,'ZKF', key, balance_zkf, WALLET_COLLECT, ZKF, ERC20_ABI)
-            sleeping(5,5)
-        else:
-            logger.warning(f'collect ZKF | Нет на аккаунте ZKF. Пропускаем')
 
-        amount_left = round(random.uniform(AMOUNT_MIN_LEFT_USDC, AMOUNT_MAX_LEFT_USDC), 6)
-        amount_to_transfer = web3.eth.get_balance(address) - Web3.to_wei(amount_left, 'ether')
-        if (amount_to_transfer > 0):
-            collect_usdc = Web3.from_wei(web3.eth.get_balance(address) - Web3.to_wei(amount_left, 'ether'), 'ether')
-            cprint(f'collect_usdc = {collect_usdc}')
-            transfer_eth(web3,'ZKF', key, collect_usdc, WALLET_COLLECT)
-            sleeping(5,5)
-        else:
-            logger.warning(f'collect USDC | USDC баланс < AMOUNT_LEFT_USDC ({amount_left}). Пропускаем')
+        if (COLLECT_TOKEN == 'ZKF'):
+            balance_zkf = check_token_balance(key, check_rpc('ZKF')['rpc'], ZKF, RETRY)
+            if (balance_zkf > 0):
+                cprint(f'>>>> collect {Web3.from_wei(balance_zkf, "ether")} ZKF')
+                transfer_token(web3,'ZKF', key, balance_zkf, WALLET_COLLECT, ZKF, ERC20_ABI, RETRY)
+                sleeping(5,5)
+            else:
+                logger.warning(f'collect ZKF | Нет на аккаунте ZKF. Пропускаем')
+
+        if (COLLECT_TOKEN == 'USDC'):
+            amount_left = round(random.uniform(AMOUNT_MIN_LEFT_USDC, AMOUNT_MAX_LEFT_USDC), 6)
+            amount_to_transfer = web3.eth.get_balance(address) - Web3.to_wei(amount_left, 'ether')
+            if (amount_to_transfer > 0):
+                collect_usdc = Web3.from_wei(web3.eth.get_balance(address) - Web3.to_wei(amount_left, 'ether'), 'ether')
+                cprint(f'collect_usdc = {collect_usdc}')
+                transfer_eth(web3,'ZKF', key, collect_usdc, WALLET_COLLECT)
+                sleeping(5,5)
+            else:
+                logger.warning(f'collect USDC | USDC баланс < AMOUNT_LEFT_USDC ({amount_left}). Пропускаем')
 
     else:
         logger.warning(f'collect USDC | Нет на аккаунте USDC. Пропускаем')
@@ -176,15 +180,42 @@ def get_inscription_amount(address, insctiption_ticker):
     if resp.status_code == 200:
         try:
             text = json.loads(resp.text)
-            total_amount = text['result'][insctiption_ticker.lower()]['amt']
+
+            hold_amount = text['result'][insctiption_ticker.lower()]['amt']  
             market_amount = text['result'][insctiption_ticker.lower()]['market']
-            # amt_available_for_sale = total_amount - market_amount
+            if (market_amount > 0 or hold_amount > 0):
+                cprint(f'{address};{hold_amount};{market_amount}')
+            return hold_amount
+        except:
+            if (MODE == 'INSCRIPTION'):
+                logger.debug(f'Something going wrong')
+            return 0
+        
+def get_inscription_amount_on_market(address, insctiption_ticker):
+    url = f'https://api.zkfair.io/ins/mint/address?tick={insctiption_ticker.lower()}&address={address}'
+
+    headers ={
+                'User-Agent':UserAgent().random,
+                'Referer':f'https://fairinscription.org/',
+                'Origin':f'https://fairinscription.org/',
+                'method':f'GET',
+            }
+
+    resp = requests.get(url, headers=headers)
+    if resp.status_code == 200:
+        try:
+            text = json.loads(resp.text)
+            market_amount = text['result'][insctiption_ticker.lower()]['market']
             cprint(f'market_amount = {market_amount}')
-            cprint(f'total_amount = {total_amount}')
-            return total_amount
+            return market_amount
         except:
             logger.debug(f'Something going wrong')
             return 0
+        
+def show_address_which_selling_inscription(address, insctiption_ticker):
+    amount = get_inscription_amount_on_market(address, insctiption_ticker)
+    if (amount > 0):
+        cprint(f'{address};{amount}')
 
 def get_inscription_floor(insctiption_ticker):
     url = f'https://api.zkfair.io/ins/mint/market-info-tick?tick={insctiption_ticker.lower()}'
@@ -235,17 +266,23 @@ if __name__ == "__main__":
             web3 = Web3(Web3.HTTPProvider(check_rpc('ZKF')['rpc']))
             address = web3.eth.account.from_key(key).address
             i = i + 1
-            logger.debug(f'{i} wallet: https://scan.zkfair.io/address/{address} ')
-
             
             if (MODE == 'TRANSFER'):
+                logger.debug(f'{i} wallet: https://scan.zkfair.io/address/{address} ')
                 transfer_to_wallets(web3, key)
 
             if (MODE == 'COLLECT'):
+                logger.debug(f'{i} wallet: https://scan.zkfair.io/address/{address} ')
                 collect(web3, key, address)
+                sleepForAWhile(5,5,False)
             
             if (MODE == 'INSCRIPTION'):
+                logger.debug(f'{i} wallet: https://scan.zkfair.io/address/{address} ')
                 inscription(web3, key, address)
+
+            if (MODE == 'INSCRIPTION_ON_ACCOUNT'):
+                get_inscription_amount(address, INSCRIPTION_TICKER)
+                sleepForAWhile(5,5,False)
             
 
     main()

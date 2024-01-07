@@ -98,7 +98,7 @@ def check_balance(privatekey, rpc_chain, symbol_chain):
         cprint(f'error : {error}', 'yellow')
         0, 0
 
-def check_token_balance(privatekey, rpc_chain, address_contract):
+def check_token_balance(privatekey, rpc_chain, address_contract, retry=0):
     try:
 
         web3 = Web3(Web3.HTTPProvider(rpc_chain))
@@ -117,8 +117,14 @@ def check_token_balance(privatekey, rpc_chain, address_contract):
         return token_balance
 
     except Exception as error:
-        cprint(f'error : {error}', 'yellow')
-        return 0
+        cprint(f'error : {error}', 'red')
+        cprint(f'>>> check_token_balance : {privatekey} | {error}', 'red')
+        result = 0
+        if (retry > 0):
+            retry = retry - 1
+            sleeping(2,2)
+            result = check_token_balance(privatekey, rpc_chain, address_contract, retry)
+        return result
 
 def getChainsWithNativeTokenBalance(privatekey, chain_list):
     result = []
